@@ -1,6 +1,16 @@
 import axios from 'axios';
 
-const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+// Normalize backend base URL to ensure trailing slashes and missing /api paths are resolved
+function resolveBaseURL() {
+  const envUrl = (import.meta.env.VITE_API_URL || '').trim();
+  if (!envUrl) {
+    return 'http://localhost:8000/api';
+  }
+  const clean = envUrl.replace(/\/+$/, '');
+  return clean.endsWith('/api') ? clean : `${clean}/api`;
+}
+
+const baseURL = resolveBaseURL();
 
 const api = axios.create({
   baseURL,

@@ -72,8 +72,13 @@ app.add_middleware(
 
 
 # --- Routes ----------------------------------------------------------------
+# Primary /api prefix
 app.include_router(auth_router, prefix="/api")
 app.include_router(products_router, prefix="/api")
+
+# Dual-mount root fallback (ensures client requests work seamlessly whether VITE_API_URL includes /api or not)
+app.include_router(auth_router)
+app.include_router(products_router)
 
 
 @app.get("/", tags=["health"])
@@ -83,6 +88,7 @@ def root(request: Request):
     return {"status": "ok", "message": "SmartPrice Tracker API", "docs": "/docs"}
 
 
+@app.get("/health", tags=["health"])
 @app.get("/api/health", tags=["health"])
 @limiter.limit("100/minute")
 def api_health(request: Request):
