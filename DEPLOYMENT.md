@@ -1,6 +1,8 @@
 # 🚀 SmartPrice Tracker — Production Deployment Guide
 
-This guide walks you through deploying **SmartPrice Tracker** as a live public website using **Render** (Free All-in-One deployment for both FastAPI Backend and React Frontend).
+Deploy **SmartPrice Tracker** as a live website:
+* **Frontend**: [Vercel](https://vercel.com) (Fast global CDN, instant builds for React Vite)
+* **Backend**: [Render](https://render.com) (Continuous Web Service running FastAPI & 24/7 background price scrapers)
 
 ---
 
@@ -8,140 +10,85 @@ This guide walks you through deploying **SmartPrice Tracker** as a live public w
 
 | Component | Platform | Service Type | Tech Stack |
 | :--- | :--- | :--- | :--- |
-| **Backend** | [Render](https://render.com) | Web Service (Free) | Python 3.11, FastAPI, Uvicorn, SQLite, APScheduler |
-| **Frontend** | [Render](https://render.com) | Static Site (Free) | React 18, Vite, TailwindCSS, Client-side SPA routing |
+| **Backend API & Scrapers** | [Render](https://render.com) | Web Service (Free) | Python 3.11, FastAPI, Uvicorn, SQLite, APScheduler |
+| **Frontend Web App** | [Vercel](https://vercel.com) | Production Static/SPA (Free) | React 18, Vite, TailwindCSS, Client-side SPA routing |
 
 ---
 
 ## 🔒 Security Pre-Check
 
-Before pushing your code to GitHub:
-* ✅ Verify `.env` is listed in your `.gitignore` (already configured).
-* ✅ Your 16-character Gmail App Password or Resend API Key will **NEVER** be committed to GitHub.
-* ✅ All secret credentials are added safely inside the Render Web Dashboard.
+* ✅ `.env` is ignored by `.gitignore` — your 16-digit Gmail password / Resend key is **NEVER** committed to GitHub.
+* ✅ Secret credentials are entered securely in the Render Dashboard.
+* ✅ Backend CORS is pre-configured to automatically allow your Vercel domain (`*.vercel.app`).
 
 ---
 
-## Step 1: Push Your Code to GitHub
+## Step 1: Push Code to GitHub
 
-Open a terminal in your project root (`e:\MY-PROJECTS\Pricetracker-2`):
+In your local project terminal (`e:\MY-PROJECTS\Pricetracker-2`):
 
 ```bash
-# 1. Initialize git (if not already done)
-git init
-
-# 2. Stage all files (respecting .gitignore)
+# Stage and commit your changes
 git add .
+git commit -m "feat: configure Vercel frontend and Render backend deployment"
 
-# 3. Commit your changes
-git commit -m "feat: complete user authentication, privacy isolation, and deployment configuration"
-
-# 4. Create a new repository on GitHub (https://github.com/new)
-# Then link your remote and push:
-git branch -M main
-git remote add origin https://github.com/<your-username>/<your-repo-name>.git
-git push -u origin main
+# Push to your repository
+git push origin master
 ```
 
 ---
 
-## Step 2: Deploy with 1-Click Render Blueprint (`render.yaml`)
-
-We have pre-configured a [`render.yaml`](./render.yaml) blueprint in your project.
+## Step 2: Deploy Backend on Render
 
 1. Go to your [Render Dashboard](https://dashboard.render.com).
 2. Click **New +** in the top-right corner and select **Blueprint**.
-3. Connect your GitHub repository.
-4. Render will automatically detect `render.yaml` and configure both services:
-   - `smartprice-backend` (Web Service)
-   - `smartprice-frontend` (Static Site)
-5. Under **Environment Variables**, provide your secrets:
-   * **`RESEND_API_KEY`**: Your `re_...` key from [resend.com](https://resend.com) (or leave empty if using Gmail).
-   * **`SMTP_SERVER`**: `smtp.gmail.com` (if using Gmail).
-   * **`SMTP_USERNAME`**: Your actual Gmail address.
-   * **`SMTP_PASSWORD`**: Your 16-character Gmail App Password.
-   * **`FROM_EMAIL`**: Your sending email address.
-6. Click **Apply**. Render will start building both services simultaneously.
+3. Select your repository (`saicharan0925/Pricetracker-2`).
+4. Render will read [`render.yaml`](./render.yaml) and configure **`smartprice-backend`**.
+5. In the environment setup screen, enter your email credentials:
+   * **`SMTP_SERVER`**: `smtp.gmail.com`
+   * **`SMTP_USERNAME`**: Your actual Gmail address
+   * **`SMTP_PASSWORD`**: Your 16-character Gmail App Password
+   * **`FROM_EMAIL`**: Your sending email address
+   *(Or fill in `RESEND_API_KEY` if using Resend)*
+6. Click **Apply**.
+7. Wait 2–3 minutes for the build to finish. Once live, copy your backend URL:
+   `https://smartprice-backend.onrender.com`
 
 ---
 
-## Step 3: Connect Frontend to Backend
+## Step 3: Deploy Frontend on Vercel
 
-1. Wait for `smartprice-backend` to complete its build.
-2. Copy your backend live URL from Render (e.g. `https://smartprice-backend.onrender.com`).
-3. In the Render Dashboard, click on **`smartprice-frontend`**:
-   - Go to **Environment**.
-   - Add/Edit the variable:
-     - **Key**: `VITE_API_URL`
-     - **Value**: `https://smartprice-backend.onrender.com/api` *(replace with your actual backend URL)*.
-   - Click **Save Changes**.
-4. In **`smartprice-backend`**:
-   - Go to **Environment**.
-   - Set **`FRONTEND_URL`** to your frontend URL (e.g. `https://smartprice-frontend.onrender.com`).
-   - Click **Save Changes**.
-
----
-
-## 🛠️ Alternative: Manual Deployment (Step-by-Step)
-
-If you prefer to configure the services manually on Render without using the blueprint:
-
-### 1. Deploy the Backend (Web Service)
-* Click **New +** -> **Web Service** -> Connect your GitHub repo.
-* **Name**: `smartprice-backend`
-* **Region**: Oregon (or closest to you)
-* **Root Directory**: `backend`
-* **Runtime**: `Python 3`
-* **Build Command**: `pip install -r requirements.txt`
-* **Start Command**: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-* **Instance Type**: Free
-* **Environment Variables**:
-  ```env
-  PYTHON_VERSION=3.11.9
-  DATABASE_URL=sqlite:///./smartprice.db
-  JWT_SECRET=<click 'Generate' in Render>
-  CHECK_INTERVAL_MINUTES=30
-  FRONTEND_URL=https://smartprice-frontend.onrender.com
-  SMTP_SERVER=smtp.gmail.com
-  SMTP_PORT=587
-  SMTP_USERNAME=your_email@gmail.com
-  SMTP_PASSWORD=your_16_char_app_password
-  FROM_EMAIL=your_email@gmail.com
-  ```
-* Click **Create Web Service**.
-
-### 2. Deploy the Frontend (Static Site)
-* Click **New +** -> **Static Site** -> Connect your GitHub repo.
-* **Name**: `smartprice-frontend`
-* **Root Directory**: `frontend`
-* **Build Command**: `npm install && npm run build`
-* **Publish Directory**: `dist`
-* **Redirects/Rewrites**:
-  * Action: `Rewrite`
-  * Source: `/*`
-  * Destination: `/index.html`
-* **Environment Variables**:
-  ```env
-  VITE_API_URL=https://smartprice-backend.onrender.com/api
-  ```
-* Click **Create Static Site**.
+1. Log in to [Vercel](https://vercel.com).
+2. Click **Add New…** -> **Project**.
+3. Import your GitHub repository (`saicharan0925/Pricetracker-2`).
+4. In the project configuration screen:
+   * **Framework Preset**: `Vite` (auto-detected)
+   * **Root Directory**: Click *Edit* and select **`frontend`** (very important!)
+5. Expand **Environment Variables**:
+   * **Key**: `VITE_API_URL`
+   * **Value**: `https://smartprice-backend.onrender.com/api` *(replace with your real Render backend URL)*
+6. Click **Deploy**.
+7. In ~30 seconds, Vercel will give you a live production URL (e.g. `https://pricetracker-2.vercel.app`)!
 
 ---
 
-## ✅ Post-Deployment Verification Checklist
+## Step 4: Final Linkage (Render CORS)
 
-Once both services show **Live**:
+1. Copy your live Vercel URL (e.g. `https://pricetracker-2.vercel.app`).
+2. Go back to your [Render Dashboard](https://dashboard.render.com) -> click **`smartprice-backend`** -> **Environment**.
+3. Set **`FRONTEND_URL`** to your Vercel URL:
+   ```
+   FRONTEND_URL = https://pricetracker-2.vercel.app
+   ```
+4. Click **Save Changes** (Render will automatically re-deploy with your custom origin).
 
-1. **Visit Frontend URL**: Open `https://smartprice-frontend.onrender.com`.
-2. **Verify Public Demo Mode**:
-   - You should see the **Public Demo** badge and 4 curated sample items.
-   - Verify that personal products (`buds`, `table`, etc.) and emails are **hidden**.
-3. **Register an Account**:
-   - Click **Sign Up** -> Register a new user.
-   - Verify immediate switch to **Private Account** mode.
-4. **Track a Product**:
-   - Click **+ Add** -> Paste an Amazon or Flipkart URL.
-   - Verify that your verified email is auto-filled.
-   - Click **Start Tracking** and verify the welcome confirmation email arrives in your inbox!
-5. **Direct Link Refresh**:
-   - Navigate to `/dashboard` or `/login` and refresh the page — client-side routing should load seamlessly without 404 errors.
+---
+
+## ✅ Post-Deployment Verification
+
+1. **Open Vercel URL**: Visit `https://pricetracker-2.vercel.app`.
+2. **Public Demo Preview**: Confirm you see the **Public Demo** badge and 4 curated demo items.
+3. **Register an Account**: Click **Sign Up** -> Register a new account.
+4. **Private Dashboard**: Confirm you are switched to **Private Account** mode.
+5. **Track a Product**: Click **+ Add** -> Paste an Amazon or Flipkart URL. Verify the confirmation email arrives in your inbox!
+6. **Refresh Any Page**: Navigate to `/dashboard` or `/login` and refresh — verify no 404 errors appear.

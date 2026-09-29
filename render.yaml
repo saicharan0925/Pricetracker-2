@@ -1,11 +1,11 @@
-# Render Blueprint Specification for SmartPrice Tracker
+# Render Blueprint Specification for SmartPrice Tracker Backend
 # https://render.com/docs/blueprint-spec
 
 version: "1"
 
 services:
   # ===========================================================================
-  # 1. FastAPI Backend Web Service
+  # FastAPI Backend Web Service
   # ===========================================================================
   - type: web
     name: smartprice-backend
@@ -44,24 +44,3 @@ services:
       - key: FROM_EMAIL
         sync: false
 
-  # ===========================================================================
-  # 2. React Vite Frontend Static Site
-  # ===========================================================================
-  - type: web
-    name: smartprice-frontend
-    runtime: static
-    plan: free
-    region: oregon
-    rootDir: frontend
-    buildCommand: npm install && npm run build
-    staticPublishPath: dist
-    autoDeploy: true
-    routes:
-      # Client-side SPA routing rewrite rule
-      - type: rewrite
-        source: /*
-        destination: /index.html
-    envVars:
-      # Point to your deployed backend URL + /api (e.g. https://smartprice-backend.onrender.com/api)
-      - key: VITE_API_URL
-        sync: false
