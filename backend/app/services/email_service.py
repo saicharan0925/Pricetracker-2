@@ -20,6 +20,12 @@ def is_resend_configured() -> bool:
     return bool(settings.RESEND_API_KEY and settings.RESEND_API_KEY.strip())
 
 
+def is_brevo_configured() -> bool:
+    """Check whether Brevo API key is present."""
+    settings = get_settings()
+    return bool(settings.BREVO_API_KEY and settings.BREVO_API_KEY.strip())
+
+
 def is_smtp_configured() -> bool:
     """Check whether SMTP credentials are present in configuration."""
     settings = get_settings()
@@ -27,38 +33,41 @@ def is_smtp_configured() -> bool:
 
 
 def is_email_configured() -> bool:
-    """Check whether any email delivery channel (Resend or SMTP) is configured."""
-    return is_resend_configured() or is_smtp_configured()
+    """Check whether any email delivery channel (Brevo, Resend or SMTP) is configured."""
+    return is_brevo_configured() or is_resend_configured() or is_smtp_configured()
 
 
 def get_smtp_status() -> dict:
     """Return status and configuration details (masking secrets) for diagnostics."""
     settings = get_settings()
+    brevo_ready = is_brevo_configured()
     resend_ready = is_resend_configured()
     smtp_ready = is_smtp_configured()
-    configured = resend_ready or smtp_ready
+    configured = brevo_ready or resend_ready or smtp_ready
 
-    provider = "resend" if resend_ready else ("smtp" if smtp_ready else "none")
-
-    if resend_ready:
-        instructions = "Resend API is active and ready (sending from " + (settings.RESEND_FROM or "onboarding@resend.dev") + ")."
+    if brevo_ready:
+        provider = "brevo"
+        instructions = f"Brevo HTTP API is active and ready (sending to any recipient from {settings.BREVO_SENDER_EMAIL or 'configured sender'})."
+    elif resend_ready:
+        provider = "resend"
+        instructions = f"Resend API is active (sending from {settings.RESEND_FROM or 'onboarding@resend.dev'}). Note: On free sandbox, it only sends to the account owner."
     elif smtp_ready:
-        instructions = f"SMTP is active ({settings.SMTP_SERVER}:{settings.SMTP_PORT})."
+        provider = "smtp"
+        instructions = f"SMTP is active ({settings.SMTP_SERVER}:{settings.SMTP_PORT}). Note: Render Free tier blocks outbound SMTP ports; use Brevo or Resend HTTP API on Render."
     else:
-        instructions = (
-            "To send live emails, add either RESEND_API_KEY (Recommended from https://resend.com) "
-            "or SMTP credentials to backend/.env."
-        )
+        provider = "none"
+        instructions = "To send live emails on Render Free tier, add BREVO_API_KEY or RESEND_API_KEY in Render Dashboard."
 
     return {
         "configured": configured,
         "provider": provider,
+        "brevo_active": brevo_ready,
         "resend_active": resend_ready,
         "resend_from": settings.RESEND_FROM or "SmartPrice <onboarding@resend.dev>",
         "smtp_server": settings.SMTP_SERVER or None,
         "smtp_port": settings.SMTP_PORT,
         "smtp_username": settings.SMTP_USERNAME or None,
-        "from_email": settings.RESEND_FROM if resend_ready else (settings.FROM_EMAIL or settings.SMTP_USERNAME or None),
+        "from_email": settings.BREVO_SENDER_EMAIL if brevo_ready else (settings.RESEND_FROM if resend_ready else (settings.FROM_EMAIL or settings.SMTP_USERNAME or None)),
         "instructions": instructions,
     }
 
@@ -141,16 +150,71 @@ def _send_via_smtp(to_email: str, subject: str, html_body: str, text_body: str) 
         return False, err
 
 
+def _send_via_brevo(to_email: str, subject: str, html_body: str, text_body: str) -> tuple[bool, str]:
+    """Deliver email using Brevo HTTP API (https://api.brevo.com/v3/smtp/email).
+    Works on Render Free tier (port 443) and delivers to ANY recipient without domain restriction.
+    """
+    settings = get_settings()
+    api_key = settings.BREVO_API_KEY.strip()
+    sender_email = (
+        settings.BREVO_SENDER_EMAIL.strip()
+        or settings.FROM_EMAIL.strip()
+        or settings.SMTP_USERNAME.strip()
+        or "bheemanadhunisaicharan@gmail.com"
+    )
+    sender_name = settings.BREVO_SENDER_NAME or "SmartPrice Tracker"
+
+    url = "https://api.brevo.com/v3/smtp/email"
+    headers = {
+        "api-key": api_key,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
+    payload = {
+        "sender": {"name": sender_name, "email": sender_email},
+        "to": [{"email": to_email}],
+        "subject": subject,
+        "htmlContent": html_body,
+        "textContent": text_body,
+    }
+
+    try:
+        with httpx.Client(timeout=15.0) as client:
+            resp = client.post(url, headers=headers, json=payload)
+            data = resp.json() if "application/json" in resp.headers.get("content-type", "") else {}
+            if resp.status_code in (200, 201):
+                msg_id = data.get("messageId", "ok")
+                logger.info("Email delivered via Brevo API to %s (id=%s, subject=%r)", to_email, msg_id, subject)
+                return True, f"Email delivered via Brevo API (id: {msg_id})"
+            else:
+                err_msg = data.get("message") or f"HTTP {resp.status_code}: {resp.text}"
+                logger.error("Brevo API delivery error to %s: %s", to_email, err_msg)
+                return False, f"Brevo API error: {err_msg}"
+    except Exception as exc:
+        err = f"Failed to connect to Brevo API: {exc}"
+        logger.error(err)
+        return False, err
+
+
 def _send_mail(to_email: str, subject: str, html_body: str, text_body: str) -> tuple[bool, str]:
-    """Unified email router: Prefer SMTP (Gmail) for unrestricted recipient delivery, fallback to Resend API."""
-    if is_smtp_configured():
-        success, msg = _send_via_smtp(to_email, subject, html_body, text_body)
+    """Unified email router: Brevo HTTP (unrestricted) -> Resend HTTP -> SMTP."""
+    # 1. Brevo HTTP API: works on Render Free tier (port 443) and sends to ANY recipient!
+    if is_brevo_configured():
+        success, msg = _send_via_brevo(to_email, subject, html_body, text_body)
         if success:
             return True, msg
-        logger.warning("SMTP delivery failed (%s). Attempting Resend API fallback...", msg)
+        logger.warning("Brevo API delivery failed (%s). Falling back...", msg)
 
+    # 2. Resend API: HTTP port 443 — works on Render, but sandbox only sends to account owner
     if is_resend_configured():
-        return _send_via_resend(to_email, subject, html_body, text_body)
+        success, msg = _send_via_resend(to_email, subject, html_body, text_body)
+        if success:
+            return True, msg
+        logger.warning("Resend API delivery failed (%s). Falling back...", msg)
+
+    # 3. SMTP (Gmail/etc.): works locally or on paid instances; blocked on Render Free tier
+    if is_smtp_configured():
+        return _send_via_smtp(to_email, subject, html_body, text_body)
 
     logger.warning(
         "No email service configured (RESEND_API_KEY or SMTP) in backend/.env - skipping delivery to %s (subject=%r)",

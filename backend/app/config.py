@@ -20,6 +20,11 @@ class Settings(BaseSettings):
     RESEND_API_KEY: str = ""
     RESEND_FROM: str = "SmartPrice <onboarding@resend.dev>"
 
+    # Brevo HTTP API (https://brevo.com - Sends to ANY recipient on Render Free tier without custom domain)
+    BREVO_API_KEY: str = ""
+    BREVO_SENDER_EMAIL: str = ""
+    BREVO_SENDER_NAME: str = "SmartPrice Tracker"
+
     # SMTP Configuration (Alternative: Gmail, Brevo, Mailgun)
     SMTP_SERVER: str = ""
     SMTP_PORT: int = 587
