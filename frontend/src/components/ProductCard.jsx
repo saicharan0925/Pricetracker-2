@@ -75,8 +75,12 @@ export default function ProductCard({ product, onCheck, onDelete, onEdit, checki
             {product.name || 'Untitled product'}
           </h3>
           <div className="flex items-end gap-2 mt-2">
-            <span className="text-xl font-extrabold text-white">{formatINR(price)}</span>
-            {mrp > price && <span className="text-sm text-slate-400 line-through mb-0.5">{formatINR(mrp)}</span>}
+            {price > 0 ? (
+              <span className="text-xl font-extrabold text-white">{formatINR(price)}</span>
+            ) : (
+              <span className="text-sm font-semibold text-amber-300">Price Pending</span>
+            )}
+            {mrp > price && price > 0 && <span className="text-sm text-slate-400 line-through mb-0.5">{formatINR(mrp)}</span>}
           </div>
           <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
             Desired: <span className="text-emerald-400 font-semibold">{formatINR(desired)}</span>

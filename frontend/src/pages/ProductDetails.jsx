@@ -138,9 +138,13 @@ export default function ProductDetails() {
             </div>
             <h1 className="text-xl sm:text-2xl font-extrabold leading-snug mt-1">{product.name}</h1>
             <div className="flex items-end gap-2 mt-3">
-              <span className="text-3xl font-extrabold">{inr(price)}</span>
-              {mrp > price && <span className="text-slate-400 line-through mb-1">{inr(mrp)}</span>}
-              {mrp > price && (
+              {price > 0 ? (
+                <span className="text-3xl font-extrabold">{inr(price)}</span>
+              ) : (
+                <span className="text-2xl font-bold text-amber-300">Price Pending</span>
+              )}
+              {mrp > price && price > 0 && <span className="text-slate-400 line-through mb-1">{inr(mrp)}</span>}
+              {mrp > price && price > 0 && (
                 <span className="mb-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                   <TrendingDown className="w-3 h-3" /> {Math.round(((mrp - price) / mrp) * 100)}% off
                 </span>
@@ -148,7 +152,11 @@ export default function ProductDetails() {
             </div>
             <p className="text-sm text-slate-400 mt-2 inline-flex items-center gap-1.5">
               <Target className="w-4 h-4 text-emerald-400" /> Desired: <span className="text-emerald-300 font-semibold">{inr(desired)}</span>
-              {desired && price <= desired && <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-gradient-to-r from-indigo-500 to-purple-500">DEAL HIT</span>}
+              {desired > 0 && price > 0 && price <= desired && (
+                <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-gradient-to-r from-indigo-500 to-purple-500">
+                  DEAL HIT
+                </span>
+              )}
             </p>
             <div className="flex flex-wrap gap-2 mt-4">
               {!product.is_demo && (
