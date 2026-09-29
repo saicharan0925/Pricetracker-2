@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+pydantic
+pydantic-settings
+email-validator
+beautifulsoup4
+requests
+lxml
+apscheduler
+python-dotenv
+slowapi
+psycopg2-binary
+httpx
+brotli
+pyjwt
+bcrypt
