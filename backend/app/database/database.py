@@ -56,6 +56,35 @@ def init_db():
         except Exception:
             pass
 
+    seed_demo_accounts()
+
+
+def seed_demo_accounts():
+    """Ensure standard demo testing accounts exist with known credentials."""
+    try:
+        from app.models.models import User
+        from app.utils.security import hash_password
+
+        with SessionLocal() as db:
+            accounts = [
+                ("demo@smartprice.dev", "Demo Reviewer", "Demo@123456"),
+                ("tester@smartprice.dev", "Test User", "Test@123456"),
+            ]
+            for email, name, pwd in accounts:
+                u = db.query(User).filter(User.email == email).first()
+                if not u:
+                    db.add(User(
+                        email=email,
+                        name=name,
+                        hashed_password=hash_password(pwd),
+                        is_active=True,
+                    ))
+                else:
+                    u.hashed_password = hash_password(pwd)
+            db.commit()
+    except Exception:
+        pass
+
 
 def get_db():
     """Yield a SQLAlchemy session and ensure it is closed afterwards."""

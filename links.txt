@@ -1,0 +1,60 @@
+================================================================================
+SMARTPRICE TRACKER — OFFICIAL PRODUCTION LINKS & DEMO TEST CREDENTIALS
+================================================================================
+
+1. LIVE APPLICATION (FRONTEND)
+   - Production URL:        https://pricetracker-2.vercel.app
+   - Git Branch Preview:    https://pricetracker-2-git-master-saicharan0925.vercel.app
+   - Registration Page:     https://pricetracker-2.vercel.app/register
+   - Sign In Page:          https://pricetracker-2.vercel.app/login
+   - Dashboard:             https://pricetracker-2.vercel.app/dashboard
+   - Add Product:           https://pricetracker-2.vercel.app/add
+   - Analytics:             https://pricetracker-2.vercel.app/analytics
+
+--------------------------------------------------------------------------------
+2. SOURCE CODE (GITHUB REPOSITORY)
+   - Repository URL:        https://github.com/saicharan0925/Pricetracker-2
+   - Visibility:            Public
+   - Branch:                master
+
+--------------------------------------------------------------------------------
+3. LIVE API BACKEND (RENDER CLOUD)
+   - Backend API URL:       https://smartprice-backend.onrender.com
+   - Interactive Docs:      https://smartprice-backend.onrender.com/docs
+   - Alternative Redoc:     https://smartprice-backend.onrender.com/redoc
+   - Health Check:          https://smartprice-backend.onrender.com/api/health
+
+--------------------------------------------------------------------------------
+4. DEMO TEST ACCOUNTS
+   You can use either of the pre-seeded accounts below, or register your own:
+
+   [Account 1: Demo Reviewer]
+   - Email:                 demo@smartprice.dev
+   - Password:              Demo@123456
+   - Role:                  Standard user with private tracking vault
+
+   [Account 2: Test User]
+   - Email:                 tester@smartprice.dev
+   - Password:              Test@123456
+   - Role:                  Test account to verify user-to-user data isolation
+
+   [Self-Registration]
+   - URL:                   https://pricetracker-2.vercel.app/register
+   - Note:                  Anyone can register in seconds with any email.
+
+--------------------------------------------------------------------------------
+5. SAMPLE E-COMMERCE URLS TO TEST TRACKING
+   Copy and paste any of these working links on the "Add Product" page:
+
+   - Amazon India (Sony WH-1000XM5 ANC Headphones):
+     https://www.amazon.in/Sony-WH-1000XM5-Wireless-Noise-Cancelling-Headphones/dp/B09XS7JWHH
+
+   - Flipkart (Boult Audio Z40 True Wireless Earbuds):
+     https://www.flipkart.com/goboult-z40-enc-mic-60hr-battery-metal-finish-low-latency-5-3v-bluetooth/p/itm3139664c81d1a
+
+   - Amazon India (Apple MacBook Air M2 13.6"):
+     https://www.amazon.in/Apple-MacBook-Air-Laptop-M2/dp/B0B3CQ6Q7Y
+
+================================================================================
+Generated for SmartPrice Tracker v2.0 Production Deployment
+================================================================================
