@@ -142,19 +142,15 @@ def _send_via_smtp(to_email: str, subject: str, html_body: str, text_body: str) 
 
 
 def _send_mail(to_email: str, subject: str, html_body: str, text_body: str) -> tuple[bool, str]:
-    """Unified email router: Resend API -> SMTP fallback -> Simulation."""
-    if is_resend_configured():
-        success, msg = _send_via_resend(to_email, subject, html_body, text_body)
+    """Unified email router: Prefer SMTP (Gmail) for unrestricted recipient delivery, fallback to Resend API."""
+    if is_smtp_configured():
+        success, msg = _send_via_smtp(to_email, subject, html_body, text_body)
         if success:
             return True, msg
-        # If Resend failed (e.g. sandbox restriction to other recipients) and SMTP is configured, fall back to SMTP!
-        if is_smtp_configured():
-            logger.info("Resend rejected recipient %s (%s). Automatically delivering via Gmail SMTP...", to_email, msg)
-            return _send_via_smtp(to_email, subject, html_body, text_body)
-        return False, msg
+        logger.warning("SMTP delivery failed (%s). Attempting Resend API fallback...", msg)
 
-    if is_smtp_configured():
-        return _send_via_smtp(to_email, subject, html_body, text_body)
+    if is_resend_configured():
+        return _send_via_resend(to_email, subject, html_body, text_body)
 
     logger.warning(
         "No email service configured (RESEND_API_KEY or SMTP) in backend/.env - skipping delivery to %s (subject=%r)",

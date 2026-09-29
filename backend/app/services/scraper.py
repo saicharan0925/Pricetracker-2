@@ -41,8 +41,18 @@ REQUEST_TIMEOUT = 15
 _PRICE_RE = re.compile(r"[\d,]+\.?\d*")
 
 
-def get_headers() -> dict[str, str]:
-    """Return realistic browser headers with a random user-agent."""
+def get_headers(url: str = "") -> dict[str, str]:
+    """Return realistic browser headers with a random user-agent.
+    Flipkart serves complete Schema.org JSON-LD and price tags to modern mobile user-agents.
+    """
+    if url and "flipkart." in url.lower():
+        return {
+            "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1",
+        }
     return {
         "User-Agent": random.choice(USER_AGENTS),
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
@@ -260,22 +270,26 @@ def scrape_amazon(soup: BeautifulSoup, url: str) -> tuple[Optional[str], Optiona
 
 def scrape_flipkart(soup: BeautifulSoup, url: str) -> tuple[Optional[str], Optional[float], Optional[str], Optional[float]]:
     """Scrape title, price, image and MRP from a Flipkart product page."""
-    title = _first_text(soup, ["span.B_NuCI", "h1 span", "h1.VU-ZEz", "span.VU-ZEz", "h1", ".B_NuCI"])
+    # 1. Try Schema.org JSON-LD first (high fidelity, reliable on mobile Flipkart)
+    j_title, j_price, j_image, j_mrp = extract_json_ld(soup, url)
+
+    # 2. HTML elements as fallback / augmentation
+    title = j_title or _first_text(soup, ["span.B_NuCI", "h1 span", "h1.VU-ZEz", "span.VU-ZEz", "h1", ".B_NuCI"])
     price_text = _first_text(
         soup,
         [
-            "div._30jeq3",
-            "div._30jeq3._16Jk6d",
-            "div.Nx9bqj",
             "div.Nx9bqj.CxhGGd",
+            "div.Nx9bqj",
+            "div._30jeq3._16Jk6d",
+            "div._30jeq3",
             "div._25b18c .Nx9bqj",
             "._30jeq3",
         ],
     )
     mrp_text = _first_text(soup, ["div._3I9_wc", "div.yRaY8j", "div._25b18c .yRaY8j"])
-    image = _first_image(soup, ["img._396cs4", "img.q6DClP", "img.DByuf4", "img._53J4C-", "._396cs4"], url)
-    price = extract_price_from_text(price_text or "")
-    mrp = extract_price_from_text(mrp_text or "")
+    image = j_image or _first_image(soup, ["img._396cs4", "img.q6DClP", "img.DByuf4", "img._53J4C-", "._396cs4"], url)
+    price = j_price if j_price is not None else extract_price_from_text(price_text or "")
+    mrp = j_mrp if j_mrp is not None else extract_price_from_text(mrp_text or "")
     return title, price, image, mrp
 
 
@@ -363,20 +377,21 @@ def scrape_product(url: str) -> dict[str, Any]:
     """
     slug_name = extract_name_from_url(url)
     try:
-        headers = get_headers()
+        headers = get_headers(url)
         resp = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT)
 
-        # Check for bot challenge or block
+        # Check for genuine bot challenge or block
         is_blocked = resp.status_code in (403, 503) or (
             resp.status_code == 200
             and any(
                 phrase in resp.text.lower()
                 for phrase in (
+                    "<title>robot check</title>",
                     "click the button below to continue shopping",
-                    "robot check",
-                    "captcha",
+                    "enter the characters you see below",
                     "cf-browser-verification",
                     "attention required! | cloudflare",
+                    "<title>just a moment...</title>",
                 )
             )
         )
